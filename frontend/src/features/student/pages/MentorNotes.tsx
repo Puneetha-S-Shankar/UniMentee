@@ -1,84 +1,108 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, BookOpen, Award, TrendingUp, Search, Filter } from 'lucide-react';
+import {
+  Calendar, BookOpen, Briefcase, AlertTriangle,
+  MessageCircle, Search, ChevronDown, Clock,
+  ArrowRight, RefreshCw, Zap, CheckSquare
+} from 'lucide-react';
 import api from '../../../services/api';
-import { useAuthStore } from '../../../stores/authStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface Enrollment {
+interface MentorSession {
   id: number;
-  offering_id: number;
-  subject_name: string;
-  subject_code: string;
-  credits: number;
-  semester: number;
-  faculty_name: string;
-  attendance_percent: number;
-  internal_marks: number;
-  max_internal_marks: number;
-  assignment_marks: number;
-  max_assignment_marks: number;
-  grade: string;
-  grade_points: number;
-  status: 'ON_TRACK' | 'AT_RISK' | 'CRITICAL' | 'COMPLETED';
-}
-
-interface Assessment {
-  id: number;
-  name: string;
-  assessment_type: 'INTERNAL' | 'EXTERNAL' | 'ASSIGNMENT' | 'QUIZ' | 'LAB';
-  max_marks: number;
-  marks_obtained: number;
+  mentor_name: string;
+  mentor_photo?: string;
+  session_type: 'Academic Review' | 'Career Mentoring' | 'Probation Review' | 'General Check-in';
+  subject?: string;
   date: string;
-  weightage?: number;
+  topics_discussed?: string;
+  action_items?: string[];
+  risk_category: 'NO_RISK' | 'ATTENDANCE_RISK' | 'ACADEMIC_RISK';
+  follow_up_required: boolean;
+  follow_up_date?: string;
+  notes?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function gradeColor(grade: string) {
-  if (['A+', 'A'].includes(grade)) return 'text-green-600';
-  if (['A-', 'B+'].includes(grade)) return 'text-blue-600';
-  if (['B', 'B-'].includes(grade)) return 'text-purple-600';
-  if (['C+', 'C'].includes(grade)) return 'text-orange-500';
-  return 'text-red-500';
+function priorityFromRisk(risk: MentorSession['risk_category']): 'HIGH' | 'NORMAL' | 'LOW' {
+  if (risk === 'ACADEMIC_RISK') return 'HIGH';
+  if (risk === 'ATTENDANCE_RISK') return 'NORMAL';
+  return 'LOW';
 }
 
-function statusStyle(s: Enrollment['status']) {
+function priorityStyle(p: 'HIGH' | 'NORMAL' | 'LOW') {
   const map = {
-    ON_TRACK: 'bg-emerald-100 text-emerald-700',
-    AT_RISK: 'bg-orange-100 text-orange-700',
-    CRITICAL: 'bg-red-100 text-red-600',
-    COMPLETED: 'bg-gray-100 text-gray-500',
+    HIGH: { cls: 'bg-orange-50 text-orange-600 border border-orange-200', dot: 'bg-orange-500', label: '⚡ HIGH PRIORITY' },
+    NORMAL: { cls: 'bg-blue-50 text-blue-600 border border-blue-200', dot: 'bg-blue-400', label: '● NORMAL PRIORITY' },
+    LOW: { cls: 'bg-green-50 text-green-700 border border-green-200', dot: 'bg-green-400', label: '✓ LOW PRIORITY' },
   };
-  const label = {
-    ON_TRACK: 'ON TRACK',
-    AT_RISK: 'AT RISK',
-    CRITICAL: 'CRITICAL',
-    COMPLETED: 'COMPLETED',
-  };
-  return { cls: map[s], label: label[s] };
+  return map[p];
 }
 
-function assessmentTypeStyle(t: Assessment['assessment_type']) {
+function sessionTypeStyle(type: MentorSession['session_type']) {
+  const map: Record<string, { bg: string; text: string; icon: React.ReactNode; dotColor: string }> = {
+    'Academic Review': {
+      bg: 'bg-violet-50', text: 'text-violet-600',
+      icon: <BookOpen size={11} />, dotColor: 'bg-violet-500'
+    },
+    'Career Mentoring': {
+      bg: 'bg-blue-50', text: 'text-blue-600',
+      icon: <Briefcase size={11} />, dotColor: 'bg-blue-500'
+    },
+    'Probation Review': {
+      bg: 'bg-red-50', text: 'text-red-600',
+      icon: <AlertTriangle size={11} />, dotColor: 'bg-red-500'
+    },
+    'General Check-in': {
+      bg: 'bg-gray-50', text: 'text-gray-600',
+      icon: <MessageCircle size={11} />, dotColor: 'bg-gray-400'
+    },
+  };
+  return map[type] ?? map['General Check-in'];
+}
+
+function timelineLineDot(type: MentorSession['session_type']) {
   const map: Record<string, string> = {
-    INTERNAL: 'bg-blue-100 text-blue-700',
-    EXTERNAL: 'bg-purple-100 text-purple-700',
-    ASSIGNMENT: 'bg-green-100 text-green-700',
-    QUIZ: 'bg-orange-100 text-orange-700',
-    LAB: 'bg-teal-100 text-teal-700',
+    'Academic Review': 'border-violet-400 bg-violet-50',
+    'Career Mentoring': 'border-blue-400 bg-blue-50',
+    'Probation Review': 'border-red-400 bg-red-50',
+    'General Check-in': 'border-gray-300 bg-gray-50',
   };
-  return map[t] ?? 'bg-gray-100 text-gray-600';
+  return map[type] ?? 'border-gray-300 bg-gray-50';
 }
 
-function AttendanceBar({ value }: { value: number }) {
-  const color = value >= 85 ? 'bg-green-500' : value >= 75 ? 'bg-yellow-400' : 'bg-red-500';
+function actionItemIcon(item: string) {
+  const lower = item.toLowerCase();
+  if (lower.includes('attend')) return <TrendingUpIcon />;
+  if (lower.includes('schedule') || lower.includes('follow')) return <Calendar size={11} />;
+  if (lower.includes('prepare') || lower.includes('assessment')) return <CheckSquare size={11} />;
+  return <ArrowRight size={11} />;
+}
+
+function TrendingUpIcon() {
   return (
-    <div className="flex items-center gap-2 min-w-[90px]">
-      <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-        <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${value}%` }} />
-      </div>
-      <span className={`text-xs font-bold ${value < 75 ? 'text-red-500' : 'text-gray-700'}`}>{value}%</span>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </svg>
+  );
+}
+
+function Avatar({ name, photo }: { name: string; photo?: string }) {
+  if (photo) return <img src={photo} alt={name} className="w-11 h-11 rounded-full object-cover shrink-0" />;
+  const initials = name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const colors = [
+    'bg-violet-200 text-violet-700',
+    'bg-blue-200 text-blue-700',
+    'bg-green-200 text-green-700',
+    'bg-orange-200 text-orange-700',
+  ];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  return (
+    <div className={`w-11 h-11 rounded-full ${color} flex items-center justify-center text-sm font-bold shrink-0`}>
+      {initials}
     </div>
   );
 }
@@ -87,70 +111,114 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse bg-gray-100 rounded ${className}`} />;
 }
 
-// ─── Assessment Breakdown Row ─────────────────────────────────────────────────
+// ─── Session Card ─────────────────────────────────────────────────────────────
 
-function AssessmentBreakdown({ offeringId }: { offeringId: number }) {
-  const { data: assessments = [], isLoading } = useQuery<Assessment[]>({
-    queryKey: ['student-assessments', offeringId],
-    queryFn: () => api.get(`/marks/offerings/${offeringId}/assessments`).then(r => r.data),
-  });
+function SessionCard({ session, isLast }: { session: MentorSession; isLast: boolean }) {
+  const priority = priorityFromRisk(session.risk_category);
+  const ps = priorityStyle(priority);
+  const ts = sessionTypeStyle(session.session_type);
+  const dotStyle = timelineLineDot(session.session_type);
 
-  const totalObtained = assessments.reduce((s, a) => s + (a.marks_obtained ?? 0), 0);
-  const totalMax = assessments.reduce((s, a) => s + a.max_marks, 0);
-  const overallPct = totalMax > 0 ? Math.round((totalObtained / totalMax) * 100) : 0;
+  const actionItems = session.action_items ?? (session.notes ? [] : []);
+  const displayNotes = session.topics_discussed ?? session.notes ?? '';
 
   return (
-    <div className="bg-gray-50/80 border-t border-gray-100 px-5 pb-5 pt-4">
-      <div className="max-w-3xl">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500">Assessment Breakdown</h4>
-          {!isLoading && assessments.length > 0 && (
-            <span className="text-xs font-semibold text-gray-500">
-              Overall: <span className="text-gray-800 font-bold">{totalObtained}/{totalMax}</span>
-              <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${overallPct >= 80 ? 'bg-green-100 text-green-700' : overallPct >= 60 ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                {overallPct}%
-              </span>
-            </span>
-          )}
+    <div className="relative flex gap-5">
+      {/* Timeline spine */}
+      <div className="flex flex-col items-center shrink-0" style={{ width: 20 }}>
+        <div className={`w-5 h-5 rounded-full border-2 z-10 flex items-center justify-center mt-5 ${dotStyle}`}>
+          <div className={`w-2 h-2 rounded-full ${ts.dotColor}`} />
+        </div>
+        {!isLast && <div className="w-0.5 flex-1 bg-gray-200 mt-1" />}
+      </div>
+
+      {/* Card */}
+      <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm mb-5 overflow-hidden">
+        {/* Card Header */}
+        <div className="flex items-start justify-between gap-4 px-5 pt-4 pb-3">
+          <div className="flex items-center gap-3">
+            <Avatar name={session.mentor_name} photo={session.mentor_photo} />
+            <div>
+              <p className="font-bold text-gray-900 text-sm">{session.mentor_name}</p>
+              <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                {session.subject && (
+                  <span className={`flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${ts.bg} ${ts.text}`}>
+                    {ts.icon}
+                    {session.subject}
+                  </span>
+                )}
+                {!session.subject && (
+                  <span className={`flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full ${ts.bg} ${ts.text}`}>
+                    {ts.icon}
+                    {session.session_type}
+                  </span>
+                )}
+                <span className="text-gray-300">·</span>
+                <span className="text-xs text-gray-400">
+                  {new Date(session.date).toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric', year: 'numeric'
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Priority Badge */}
+          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${ps.cls}`}>
+            {ps.label}
+          </span>
         </div>
 
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+        {/* Notes / Topics */}
+        {displayNotes && (
+          <div className="px-5 pb-3">
+            <p className="text-sm text-gray-600 italic leading-relaxed">
+              "{displayNotes}"
+            </p>
           </div>
-        ) : assessments.length === 0 ? (
-          <p className="text-xs text-gray-400 py-4 text-center">No assessments recorded yet.</p>
-        ) : (
-          <div className="grid gap-2">
-            {assessments.map(a => {
-              const pct = a.max_marks > 0 ? Math.round((a.marks_obtained / a.max_marks) * 100) : 0;
-              const barColor = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-blue-500' : 'bg-orange-400';
-              return (
-                <div key={a.id} className="bg-white rounded-xl border border-gray-100 px-4 py-3 flex items-center gap-4">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${assessmentTypeStyle(a.assessment_type)}`}>
-                    {a.assessment_type}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 truncate">{a.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      {a.weightage ? ` · ${a.weightage}% weightage` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                      <div className={`h-1.5 rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-sm font-bold text-gray-800 w-16 text-right">
-                      {a.marks_obtained ?? '—'}<span className="text-gray-400 font-normal">/{a.max_marks}</span>
+        )}
+
+        {/* Action Items */}
+        {actionItems.length > 0 && (
+          <div className="px-5 pb-4 border-t border-gray-50 pt-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+              Recommended Actions
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {actionItems.map((item, idx) => {
+                const isSchedule = item.toLowerCase().includes('schedule');
+                return (
+                  <button
+                    key={idx}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition border
+                      ${isSchedule
+                        ? 'bg-violet-600 text-white border-violet-600 hover:bg-violet-700'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:text-violet-600'
+                      }`}
+                  >
+                    <span className={isSchedule ? 'text-white' : 'text-violet-500'}>
+                      {actionItemIcon(item)}
                     </span>
-                    <span className={`text-xs font-bold w-10 text-right ${pct >= 80 ? 'text-green-600' : pct >= 60 ? 'text-blue-600' : 'text-orange-500'}`}>
-                      {pct}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Follow-up strip */}
+        {session.follow_up_required && session.follow_up_date && (
+          <div className="px-5 py-2.5 bg-orange-50 border-t border-orange-100 flex items-center gap-2">
+            <Clock size={12} className="text-orange-500 shrink-0" />
+            <span className="text-xs text-orange-700 font-medium">
+              Follow-up scheduled:{' '}
+              <span className="font-bold">
+                {new Date(session.follow_up_date).toLocaleDateString('en-US', {
+                  month: 'short', day: 'numeric', year: 'numeric'
+                })}
+              </span>
+            </span>
           </div>
         )}
       </div>
@@ -158,255 +226,201 @@ function AssessmentBreakdown({ offeringId }: { offeringId: number }) {
   );
 }
 
-// ─── Subject Row ─────────────────────────────────────────────────────────────
+// ─── Empty State ─────────────────────────────────────────────────────────────
 
-function SubjectRow({ enrollment }: { enrollment: Enrollment }) {
-  const [expanded, setExpanded] = useState(false);
-  const ss = statusStyle(enrollment.status);
-
+function EmptyState({ filtered }: { filtered: boolean }) {
   return (
-    <>
-      <tr
-        className={`hover:bg-gray-50/60 transition cursor-pointer group ${expanded ? 'bg-violet-50/30' : ''}`}
-        onClick={() => setExpanded(e => !e)}
-      >
-        {/* Subject */}
-        <td className="px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${expanded ? 'bg-violet-100' : 'bg-gray-100 group-hover:bg-violet-50'} transition`}>
-              <BookOpen size={14} className={expanded ? 'text-violet-600' : 'text-gray-400 group-hover:text-violet-500'} />
-            </div>
-            <div>
-              <p className={`font-semibold text-sm ${expanded ? 'text-violet-700' : 'text-gray-800'} transition`}>{enrollment.subject_name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{enrollment.faculty_name}</p>
-            </div>
-          </div>
-        </td>
-
-        {/* Code */}
-        <td className="px-3 py-4">
-          <span className="text-xs font-mono bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{enrollment.subject_code}</span>
-        </td>
-
-        {/* Credits */}
-        <td className="px-3 py-4 text-center">
-          <span className="text-sm font-bold text-gray-700">{enrollment.credits}</span>
-        </td>
-
-        {/* Attendance */}
-        <td className="px-3 py-4">
-          <AttendanceBar value={enrollment.attendance_percent} />
-        </td>
-
-        {/* Internal Marks */}
-        <td className="px-3 py-4 text-center">
-          <span className="text-sm font-semibold text-gray-800">{enrollment.internal_marks}</span>
-          <span className="text-xs text-gray-400">/{enrollment.max_internal_marks}</span>
-        </td>
-
-        {/* Assignment */}
-        <td className="px-3 py-4 text-center">
-          <span className="text-sm font-semibold text-gray-800">{enrollment.assignment_marks}</span>
-          <span className="text-xs text-gray-400">/{enrollment.max_assignment_marks}</span>
-        </td>
-
-        {/* Grade */}
-        <td className="px-3 py-4 text-center">
-          <span className={`text-base font-bold ${gradeColor(enrollment.grade)}`}>{enrollment.grade}</span>
-        </td>
-
-        {/* Status */}
-        <td className="px-3 py-4 text-center">
-          <span className={`text-[10px] font-bold px-2 py-1 rounded-lg ${ss.cls}`}>{ss.label}</span>
-        </td>
-
-        {/* Expand */}
-        <td className="px-3 py-4 text-center text-gray-400">
-          {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-        </td>
-      </tr>
-
-      {expanded && (
-        <tr>
-          <td colSpan={9} className="p-0">
-            <AssessmentBreakdown offeringId={enrollment.offering_id} />
-          </td>
-        </tr>
-      )}
-    </>
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center mb-4">
+        <MessageCircle size={24} className="text-violet-300" />
+      </div>
+      <h3 className="font-bold text-gray-700 text-base">
+        {filtered ? 'No matching notes' : 'No mentor feedback yet'}
+      </h3>
+      <p className="text-sm text-gray-400 mt-1 max-w-xs">
+        {filtered
+          ? 'Try adjusting your filters to find what you\'re looking for.'
+          : 'Your mentor hasn\'t shared any session notes with you yet. Check back after your next meeting.'}
+      </p>
+    </div>
   );
 }
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
-export default function Subjects() {
-  const userId = useAuthStore(s => s.userId);
-  const [search, setSearch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState<number | 'all'>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+const SESSION_TYPES = [
+  'All',
+  'Academic Review',
+  'Career Mentoring',
+  'Probation Review',
+  'General Check-in',
+] as const;
 
-  const { data: enrollments = [], isLoading } = useQuery<Enrollment[]>({
-    queryKey: ['student-enrollments', userId],
-    queryFn: () => api.get(`/students/${userId}/enrollments`).then(r => r.data),
-    enabled: !!userId,
+const PRIORITY_OPTIONS = ['All', 'High', 'Normal', 'Low'] as const;
+
+const PAGE_SIZE = 5;
+
+export default function MentorNotes() {
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('All');
+  const [priorityFilter, setPriorityFilter] = useState<string>('All');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const { data: sessions = [], isLoading } = useQuery<MentorSession[]>({
+    queryKey: ['student-mentor-sessions'],
+    queryFn: () => api.get('/mentor/my-sessions').then(r => r.data),
   });
 
-  // Derive semester list
-  const semesters = [...new Set(enrollments.map(e => e.semester))].sort((a, b) => a - b);
-
-  // Auto-select latest semester on first load
-  const activeSemester = selectedSemester === 'all' ? 'all' : selectedSemester;
-
   const filtered = useMemo(() => {
-    return enrollments.filter(e => {
-      const matchSem = activeSemester === 'all' || e.semester === activeSemester;
-      const matchSearch =
-        e.subject_name.toLowerCase().includes(search.toLowerCase()) ||
-        e.subject_code.toLowerCase().includes(search.toLowerCase()) ||
-        e.faculty_name.toLowerCase().includes(search.toLowerCase());
-      const matchStatus = statusFilter === 'all' || e.status === statusFilter;
-      return matchSem && matchSearch && matchStatus;
-    });
-  }, [enrollments, activeSemester, search, statusFilter]);
+    return sessions
+      .filter(s => {
+        const matchType = typeFilter === 'All' || s.session_type === typeFilter;
+        const priority = priorityFromRisk(s.risk_category);
+        const matchPriority =
+          priorityFilter === 'All' ||
+          (priorityFilter === 'High' && priority === 'HIGH') ||
+          (priorityFilter === 'Normal' && priority === 'NORMAL') ||
+          (priorityFilter === 'Low' && priority === 'LOW');
+        const matchSearch =
+          s.mentor_name.toLowerCase().includes(search.toLowerCase()) ||
+          (s.topics_discussed ?? '').toLowerCase().includes(search.toLowerCase()) ||
+          (s.notes ?? '').toLowerCase().includes(search.toLowerCase()) ||
+          (s.subject ?? '').toLowerCase().includes(search.toLowerCase());
+        return matchType && matchPriority && matchSearch;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.date).getTime();
+        const db = new Date(b.date).getTime();
+        return sortOrder === 'newest' ? db - da : da - db;
+      });
+  }, [sessions, typeFilter, priorityFilter, search, sortOrder]);
 
-  // Summary stats for active view
-  const avgAttendance = filtered.length
-    ? Math.round(filtered.reduce((s, e) => s + e.attendance_percent, 0) / filtered.length)
-    : 0;
-  const avgGradePoints = filtered.length
-    ? (filtered.reduce((s, e) => s + e.grade_points, 0) / filtered.length).toFixed(2)
-    : '0.00';
-  const atRiskCount = filtered.filter(e => e.status === 'AT_RISK' || e.status === 'CRITICAL').length;
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] font-display p-6 space-y-5">
+    <div className="min-h-screen bg-[#f7f8fa] font-display p-6 space-y-5 max-w-3xl">
 
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Subjects</h1>
-          <p className="text-sm text-gray-400 mt-0.5">All enrolled subjects with marks and assessment details.</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Mentor Feedback</h1>
+        <p className="text-sm text-gray-400 mt-0.5">
+          Review guidance and academic recommendations from your mentor.
+        </p>
       </div>
 
-      {/* Stats Row */}
-      {!isLoading && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Enrolled Subjects', value: filtered.length, icon: <BookOpen size={16} className="text-violet-500" />, bg: 'bg-violet-50' },
-            { label: 'Avg Attendance', value: `${avgAttendance}%`, icon: <TrendingUp size={16} className="text-blue-500" />, bg: 'bg-blue-50' },
-            { label: 'Avg Grade Points', value: avgGradePoints, icon: <Award size={16} className="text-green-500" />, bg: 'bg-green-50' },
-            { label: 'At-Risk Subjects', value: atRiskCount, icon: <Filter size={16} className="text-orange-500" />, bg: 'bg-orange-50' },
-          ].map(stat => (
-            <div key={stat.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${stat.bg} shrink-0`}>{stat.icon}</div>
-              <div>
-                <p className="text-xs text-gray-400 font-medium">{stat.label}</p>
-                <p className="text-xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            </div>
-          ))}
+      {/* Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Date / Sort */}
+        <div className="relative">
+          <button
+            onClick={() => setSortOrder(o => o === 'newest' ? 'oldest' : 'newest')}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 shadow-sm transition"
+          >
+            <Calendar size={13} className="text-gray-400" />
+            Date
+            <ChevronDown size={12} className="text-gray-400" />
+          </button>
         </div>
-      )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+        {/* Subject / Type */}
+        <div className="relative">
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+            className="appearance-none pl-8 pr-7 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer"
+          >
+            {SESSION_TYPES.map(t => (
+              <option key={t} value={t}>{t === 'All' ? 'Subject' : t}</option>
+            ))}
+          </select>
+          <BookOpen size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+
+        {/* Priority */}
+        <div className="relative">
+          <select
+            value={priorityFilter}
+            onChange={e => setPriorityFilter(e.target.value)}
+            className="appearance-none pl-8 pr-7 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer"
+          >
+            {PRIORITY_OPTIONS.map(p => (
+              <option key={p} value={p}>{p === 'All' ? 'Priority' : `${p} Priority`}</option>
+            ))}
+          </select>
+          <Zap size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+
         {/* Search */}
-        <div className="relative min-w-[220px] flex-1 max-w-sm">
+        <div className="relative flex-1 min-w-[180px]">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search subject, code or faculty..."
-            className="w-full pl-8 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition shadow-sm"
+            placeholder="Search notes..."
+            className="w-full pl-8 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition"
           />
         </div>
+      </div>
 
-        {/* Semester selector */}
-        <div className="relative">
-          <select
-            value={activeSemester}
-            onChange={e => setSelectedSemester(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            className="appearance-none bg-white border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-          >
-            <option value="all">All Semesters</option>
-            {semesters.map(s => (
-              <option key={s} value={s}>Semester {s}</option>
-            ))}
-          </select>
-          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        </div>
+      {/* Sort indicator */}
+      {sortOrder === 'oldest' && (
+        <p className="text-xs text-gray-400 flex items-center gap-1">
+          <Clock size={11} /> Showing oldest first
+        </p>
+      )}
 
-        {/* Status filter pills */}
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl shadow-sm px-2 py-1.5">
-          {[
-            { value: 'all', label: 'All' },
-            { value: 'ON_TRACK', label: 'On Track' },
-            { value: 'AT_RISK', label: 'At Risk' },
-            { value: 'CRITICAL', label: 'Critical' },
-          ].map(f => (
-            <button
-              key={f.value}
-              onClick={() => setStatusFilter(f.value)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${statusFilter === f.value ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-            >
-              {f.label}
-            </button>
+      {/* Timeline */}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex gap-5">
+              <div className="flex flex-col items-center shrink-0" style={{ width: 20 }}>
+                <Skeleton className="w-5 h-5 rounded-full mt-5" />
+                <div className="w-0.5 flex-1 bg-gray-100 mt-1" />
+              </div>
+              <Skeleton className="flex-1 h-36 rounded-2xl mb-5" />
+            </div>
           ))}
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-[11px] uppercase tracking-wider text-gray-400 border-b border-gray-100 bg-gray-50/60">
-              <th className="px-5 py-3.5 text-left">Subject</th>
-              <th className="px-3 py-3.5 text-left">Code</th>
-              <th className="px-3 py-3.5 text-center">Credits</th>
-              <th className="px-3 py-3.5 text-left">Attendance</th>
-              <th className="px-3 py-3.5 text-center">Internal</th>
-              <th className="px-3 py-3.5 text-center">Assignment</th>
-              <th className="px-3 py-3.5 text-center">Grade</th>
-              <th className="px-3 py-3.5 text-center">Status</th>
-              <th className="px-3 py-3.5 text-center w-8" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {isLoading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
-                      <td key={j} className="px-5 py-4">
-                        <Skeleton className="h-5 w-full" />
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              : filtered.length === 0
-              ? (
-                <tr>
-                  <td colSpan={9} className="py-16 text-center">
-                    <BookOpen size={28} className="text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">No subjects match your filters.</p>
-                  </td>
-                </tr>
-              )
-              : filtered.map(e => <SubjectRow key={e.id} enrollment={e} />)
-            }
-          </tbody>
-        </table>
-
-        {/* Footer count */}
-        {!isLoading && filtered.length > 0 && (
-          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/40">
-            <p className="text-xs text-gray-400">
-              Showing <span className="font-semibold text-gray-600">{filtered.length}</span> subject{filtered.length !== 1 ? 's' : ''}
-              {activeSemester !== 'all' ? ` · Semester ${activeSemester}` : ' · All semesters'}
-            </p>
+      ) : filtered.length === 0 ? (
+        <EmptyState filtered={typeFilter !== 'All' || priorityFilter !== 'All' || search !== ''} />
+      ) : (
+        <>
+          <div>
+            {visible.map((session, idx) => (
+              <SessionCard
+                key={session.id}
+                session={session}
+                isLast={idx === visible.length - 1 && !hasMore}
+              />
+            ))}
           </div>
-        )}
-      </div>
+
+          {/* Load More */}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-full text-sm font-semibold text-gray-600 hover:border-violet-300 hover:text-violet-600 shadow-sm transition"
+              >
+                <RefreshCw size={14} />
+                View Older Feedback
+              </button>
+            </div>
+          )}
+
+          {/* Summary */}
+          {!hasMore && filtered.length > 0 && (
+            <p className="text-center text-xs text-gray-400 pt-2">
+              All {filtered.length} note{filtered.length !== 1 ? 's' : ''} shown
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }
