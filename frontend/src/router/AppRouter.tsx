@@ -6,7 +6,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 // Lazy load all workspace route files
-const StudentRoutes = lazy(() => import('./routes/StudentRoutes'));
+const StudentRoutes = lazy(() => import('../features/student/StudentRoutes'));
 const MentorRoutes = lazy(() => import('./routes/MentorRoutes'));
 const ParentRoutes = lazy(() => import('./routes/ParentRoutes'));
 const FacultyRoutes = lazy(() => import('./routes/FacultyRoutes'));
