@@ -16,6 +16,7 @@ from app.routers import (
     attendance_router,
     marks_router,
     portfolio_router,
+    admin_router,
 )
 from app.routers.auth import router as auth_router
 
@@ -57,6 +58,7 @@ app.include_router(mentor_router.router)
 app.include_router(attendance_router.router)
 app.include_router(marks_router.router)
 app.include_router(portfolio_router.router)
+app.include_router(admin_router.router)
 
 @app.get('/')
 def root():
