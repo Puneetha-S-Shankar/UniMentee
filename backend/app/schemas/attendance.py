@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import date, time
+from datetime import date, time, datetime
 
 class SessionIn(BaseModel):
     session_date: date
@@ -22,3 +22,10 @@ class AttendanceRecordIn(BaseModel):
 
 class BulkAttendanceIn(BaseModel):
     records: List[AttendanceRecordIn]
+
+class AttendanceRecordOut(BaseModel):
+    student_id: int
+    status: str
+    note: Optional[str]
+    marked_at: Optional[datetime]
+    class Config: from_attributes = True

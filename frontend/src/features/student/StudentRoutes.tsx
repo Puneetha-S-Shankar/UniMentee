@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 
 // Lazy load all student page components
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Dashboard = lazy(() => import('./pages/StudentDashboardPage'));
 const Attendance = lazy(() => import('./pages/Attendance'));
 const Subjects = lazy(() => import('./pages/Subjects'));
 const MentorNotes = lazy(() => import('./pages/MentorNotes'));

@@ -18,6 +18,8 @@ from app.routers import (
     portfolio_router,
     admin_router,
     leave_router,
+    announcements_router,
+    faculty_router,
 )
 from app.routers.auth import router as auth_router
 
@@ -61,6 +63,8 @@ app.include_router(marks_router.router)
 app.include_router(portfolio_router.router)
 app.include_router(admin_router.router)
 app.include_router(leave_router.router)
+app.include_router(announcements_router.router)
+app.include_router(faculty_router.router)
 
 @app.get('/')
 def root():

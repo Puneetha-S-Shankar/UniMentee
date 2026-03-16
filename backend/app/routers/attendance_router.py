@@ -4,7 +4,8 @@ from sqlalchemy.exc import IntegrityError
 from app.database import get_db
 from app.core.rbac import get_current_user
 from app.repositories import attendance_repository as repo
-from app.schemas.attendance import SessionIn, SessionOut, BulkAttendanceIn
+from app.schemas.attendance import SessionIn, SessionOut, BulkAttendanceIn, AttendanceRecordOut
+from app.models.attendance import AttendanceRecord
 from typing import List
 
 router = APIRouter(prefix='/attendance', tags=['Attendance'])
@@ -37,6 +38,16 @@ def bulk_mark(
         db, session_id, user.university_id,
         [r.model_dump() for r in body.records])
     return {'message': 'Attendance saved'}
+
+@router.get('/sessions/{session_id}/records', response_model=List[AttendanceRecordOut])
+def get_session_records(
+    session_id: int,
+    user=Depends(get_current_user), db: Session = Depends(get_db)):
+    records = db.query(AttendanceRecord).filter(
+        AttendanceRecord.session_id == session_id,
+        AttendanceRecord.university_id == user.university_id,
+    ).all()
+    return records
 
 @router.patch('/sessions/{session_id}/lock')
 def lock(
