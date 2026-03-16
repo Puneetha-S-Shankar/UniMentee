@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import date, time
 
 class AssignmentOut(BaseModel):
@@ -24,4 +24,55 @@ class SessionOut(SessionIn):
     session_id: int
     assignment_id: int
     created_by: int
+    class Config: from_attributes = True
+
+# ── /mentor/mentees ──────────────────────────────────────────────────
+
+class MenteeStudentInfo(BaseModel):
+    student_id: int
+    usn: str
+    full_name: str
+    email: str
+    cgpa: Optional[float]
+    batch_id: int
+    section_id: Optional[int]
+    status: str
+    class Config: from_attributes = True
+
+class AtRiskFlags(BaseModel):
+    attendance: bool
+    academic: bool
+
+class MenteeOut(BaseModel):
+    assignment_id: int
+    student: MenteeStudentInfo
+    at_risk: AtRiskFlags
+    class Config: from_attributes = True
+
+# ── /mentor/dashboard-stats ──────────────────────────────────────────
+
+class RecentSessionOut(BaseModel):
+    session_id: int
+    assignment_id: int
+    session_date: date
+    student_name: str
+    topics_discussed: Optional[str]
+    class Config: from_attributes = True
+
+class UpcomingFollowupOut(BaseModel):
+    session_id: int
+    assignment_id: int
+    student_name: str
+    follow_up_date: date
+    action_items: Optional[str]
+    class Config: from_attributes = True
+
+class DashboardStats(BaseModel):
+    total_mentees: int
+    pending_followups: int
+    sessions_this_month: int
+    uncontacted_30days: int
+    at_risk_count: int
+    recent_sessions: List[RecentSessionOut]
+    upcoming_followups: List[UpcomingFollowupOut]
     class Config: from_attributes = True
