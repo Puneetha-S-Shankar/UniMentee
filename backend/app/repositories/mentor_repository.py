@@ -2,8 +2,6 @@ from sqlalchemy.orm import Session
 from app.models.mentorship import MentorAssignment, MentoringSession
 
 def get_assignments_for_mentor(db: Session, mentor_user_id: int, university_id: int):
-    print("mentor user:", mentor_user_id)
-    print("university:", university_id)
     return db.query(MentorAssignment).filter(
         MentorAssignment.mentor_user_id == mentor_user_id,
         MentorAssignment.university_id == university_id,

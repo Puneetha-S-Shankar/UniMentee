@@ -1,9 +1,5 @@
 from sqlalchemy import Column, BigInteger, String, Numeric, Boolean, Integer, Text, Date
 from sqlalchemy import ForeignKey
-from pydantic import BaseModel
-from datetime import date
-from decimal import Decimal
-
 
 from app.database import Base
 
@@ -30,6 +26,7 @@ class Assessment(Base):
     submitted_by       = Column(BigInteger)
     verified_by        = Column(BigInteger)
     published_by       = Column(BigInteger)
+    send_back_reason   = Column(Text)
     version            = Column(Integer, default=1)
 
 

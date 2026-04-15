@@ -1,15 +1,39 @@
+from typing import List, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import or_
 from app.models.students import Student, StudentSubjectEnrollment
+from app.models.users import User
 from app.models.academic import SubjectOffering
 
-def get_students(db: Session, university_id: int, batch_id=None,
-                 section_id=None, status='ACTIVE'):
-    q = db.query(Student).filter(Student.university_id == university_id)
-    if batch_id is not None:   q = q.filter(Student.batch_id == batch_id)
-    if section_id is not None: q = q.filter(Student.section_id == section_id)
-    if status:     q = q.filter(Student.status == status)
-    return q.all()
+def get_students(
+    db: Session,
+    university_id: int,
+    batch_id=None,
+    section_id=None,
+    program_id=None,
+    status=None,
+    search=None,
+) -> List[Tuple[Student, str, str]]:
+    """Join users to return (Student, full_name, email) per row."""
+    q = (
+        db.query(Student, User.full_name, User.email)
+        .join(User, Student.user_id == User.user_id)
+        .filter(Student.university_id == university_id)
+    )
+    if batch_id is not None:
+        q = q.filter(Student.batch_id == batch_id)
+    if section_id is not None:
+        q = q.filter(Student.section_id == section_id)
+    if program_id is not None:
+        q = q.filter(Student.program_id == program_id)
+    if status:
+        q = q.filter(Student.status == status)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        q = q.filter(
+            or_(Student.usn.ilike(term), User.full_name.ilike(term), User.email.ilike(term))
+        )
+    return q.order_by(Student.usn.asc()).all()
 
 def get_student_by_id(db, student_id, university_id):
     return db.query(Student).filter(

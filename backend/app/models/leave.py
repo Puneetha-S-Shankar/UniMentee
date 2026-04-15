@@ -7,7 +7,7 @@ from app.database import Base
 class LeaveRequest(Base):
     __tablename__ = 'leave_requests'
 
-    leave_id      = Column(BigInteger, primary_key=True, index=True)
+    leave_id      = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
     university_id = Column(BigInteger, nullable=False)
     student_id    = Column(BigInteger, ForeignKey('students.student_id'), nullable=False, index=True)
     from_date     = Column(Date, nullable=False)
@@ -23,6 +23,6 @@ class LeaveRequest(Base):
 class LeaveRequestSubject(Base):
     __tablename__ = 'leave_request_subjects'
 
-    id               = Column(BigInteger, primary_key=True, index=True)
+    id               = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
     leave_request_id = Column(BigInteger, ForeignKey('leave_requests.leave_id'), nullable=False, index=True)
     offering_id      = Column(BigInteger, ForeignKey('subject_offerings.offering_id'), nullable=False)

@@ -4,16 +4,19 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner';
 
 // Lazy load all student page components
 const Dashboard = lazy(() => import('./pages/StudentDashboardPage'));
-const Attendance = lazy(() => import('./pages/Attendance'));
-const Subjects = lazy(() => import('./pages/Subjects'));
-const MentorNotes = lazy(() => import('./pages/MentorNotes'));
-const Profile = lazy(() => import('./pages/Profile'));
+const StudentAttendancePage = lazy(() => import('./pages/StudentAttendancePage'));
+const StudentSubjectsPage = lazy(() => import('./pages/StudentSubjectsPage'));
+const StudentMentorNotesPage = lazy(() => import('./pages/StudentMentorNotesPage'));
+const StudentProfilePage = lazy(() => import('./pages/StudentProfilePage'));
+const StudentPerformancePage = lazy(() => import('./pages/StudentPerformancePage'));
+const StudentPortfolioPage = lazy(() => import('./pages/StudentPortfolioPage'));
+const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
 
 /**
  * StudentRoutes Component
  * 
  * Defines all routes accessible to students.
- * All routes are nested under DashboardLayout (configured in AppRouter).
+ * Nested under StudentLayout (see `src/router/index.tsx`).
  * 
  * Routes:
  *   /student/dashboard → Dashboard
@@ -43,7 +46,7 @@ export default function StudentRoutes() {
         path="attendance"
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <Attendance />
+            <StudentAttendancePage />
           </Suspense>
         }
       />
@@ -53,7 +56,7 @@ export default function StudentRoutes() {
         path="subjects"
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <Subjects />
+            <StudentSubjectsPage />
           </Suspense>
         }
       />
@@ -63,7 +66,7 @@ export default function StudentRoutes() {
         path="mentor-notes"
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <MentorNotes />
+            <StudentMentorNotesPage />
           </Suspense>
         }
       />
@@ -73,7 +76,37 @@ export default function StudentRoutes() {
         path="profile"
         element={
           <Suspense fallback={<LoadingSpinner />}>
-            <Profile />
+            <StudentProfilePage />
+          </Suspense>
+        }
+      />
+
+      {/* Academic performance (marks, SGPA/CGPA) */}
+      <Route
+        path="performance"
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <StudentPerformancePage />
+          </Suspense>
+        }
+      />
+
+      {/* Portfolio */}
+      <Route
+        path="portfolio"
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <StudentPortfolioPage />
+          </Suspense>
+        }
+      />
+
+      {/* Announcements */}
+      <Route
+        path="announcements"
+        element={
+          <Suspense fallback={<LoadingSpinner />}>
+            <AnnouncementsPage />
           </Suspense>
         }
       />

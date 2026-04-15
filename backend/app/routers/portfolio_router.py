@@ -52,7 +52,7 @@ def create_item(
     if not student:
         raise HTTPException(status_code=404, detail="Student profile not found")
 
-     # SECURITY CHECK: ensure uploaded file belongs to this user
+    # SECURITY CHECK: ensure uploaded file belongs to this user
     if not body.file_key.startswith(f"portfolios/student_{user.user_id}/"):
         raise HTTPException(
             status_code=403,
@@ -79,6 +79,7 @@ def create_item(
         entity_type='portfolio_items',
         entity_id=item.item_id
     )
+    db.commit()
 
     return {
         'item_id': item.item_id,

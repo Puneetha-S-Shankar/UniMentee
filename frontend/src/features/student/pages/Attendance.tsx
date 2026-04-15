@@ -1,6 +1,5 @@
 import { useQuery, useQueries } from '@tanstack/react-query';
 import api from '../../../services/api';
-import { useAuthStore } from '../../../stores/authStore';
 import { Download, Calendar, CheckCircle2, XCircle, Circle } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -333,8 +332,6 @@ function CalendarHeatmap() {
 // ─── Main Attendance Component ────────────────────────────────────────────────
 
 export default function Attendance() {
-  const userId = useAuthStore((s) => s.userId);
-
   // Step 1: Fetch student profile to get student_id
   const { data: student } = useQuery({
     queryKey: ['student-me'],

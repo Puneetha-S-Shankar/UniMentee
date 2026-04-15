@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
-import { useAuthStore } from '../../../stores/authStore';
 import { TrendingUp, TrendingDown, BookOpen, UserCheck, Award, ChevronRight, Clock } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -237,8 +236,6 @@ function CircleProgress({ pct }: { pct: number }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const userId = useAuthStore(s => s.userId);
-
   // Fetch student profile
   const { data: student, isLoading: studentLoading } = useQuery<StudentProfile>({
     queryKey: ['student-me'],

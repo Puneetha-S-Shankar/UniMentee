@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
-  GraduationCap, UserCheck, BookOpen, Bell,
+  GraduationCap, BookOpen, Bell,
   ChevronRight, AlertTriangle, CheckCircle2, Megaphone, CalendarClock,
 } from 'lucide-react';
 import { RadialBarChart, RadialBar, PolarAngleAxis } from 'recharts';
 import api from '../../../services/api';
+import { useAuthStore, selectToken } from '../../../stores/authStore';
 import { usePermission } from '../../../hooks/usePermission';
 
 // ─── Types (matching backend schemas) ────────────────────────────────────────
@@ -26,10 +27,12 @@ interface StudentProfile {
 
 interface AttendanceSummary {
   offering_id: number;
+  subject_code: string;
+  subject_name: string;
   total_sessions: number;
-  present_count: number;
-  absent_count: number;
-  late_count: number;
+  present: number;
+  absent: number;
+  late: number;
   percentage: number;
   sessions: unknown[];
 }
@@ -44,8 +47,9 @@ interface AssessmentMark {
   percentage: number | null;
 }
 
-interface OfferingMarks {
-  offering_id: number;
+interface SubjectMarksRow {
+  subject_name: string;
+  subject_code: string;
   assessments: AssessmentMark[];
 }
 
@@ -70,6 +74,7 @@ interface Announcement {
   posted_at: string;
   expiry_date: string | null;
   author_name: string;
+  is_read?: boolean;
 }
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
@@ -159,8 +164,10 @@ function StatusBadge({ status }: { status: string }) {
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function StudentDashboardPage() {
+  const token = useAuthStore(selectToken);
   const canViewAttendance = usePermission('ATTENDANCE_VIEW_OWN');
   const canViewMarks = usePermission('MARKS_VIEW_OWN');
+  const canViewAnnouncements = !!token;
 
   // 1. Student profile
   const { data: student, isLoading: studentLoading } = useQuery<StudentProfile>({
@@ -178,7 +185,7 @@ export default function StudentDashboardPage() {
   });
 
   // 3. Marks
-  const { data: marks, isLoading: marksLoading } = useQuery<OfferingMarks[]>({
+  const { data: marks, isLoading: marksLoading } = useQuery<SubjectMarksRow[]>({
     queryKey: ['student-marks'],
     queryFn: () => api.get('/students/me/marks').then(r => r.data),
     staleTime: 5 * 60_000,
@@ -195,9 +202,10 @@ export default function StudentDashboardPage() {
 
   // 5. Announcements
   const { data: announcements } = useQuery<Announcement[]>({
-    queryKey: ['announcements'],
-    queryFn: () => api.get('/announcements?limit=3').then(r => r.data),
+    queryKey: ['announcements', { limit: 3, preview: true }],
+    queryFn: () => api.get('/announcements', { params: { limit: 3 } }).then(r => r.data),
     staleTime: 5 * 60_000,
+    enabled: canViewAnnouncements,
   });
 
   // ── Derived values ──
@@ -220,8 +228,10 @@ export default function StudentDashboardPage() {
   // Flatten and take last 3 assessments
   const recentMarks =
     marks
-      ?.flatMap(o =>
-        o.assessments.map(a => ({ ...a, offering_id: o.offering_id })),
+      ?.flatMap(subj =>
+        subj.assessments
+          .filter(a => a.status === 'PUBLISHED')
+          .map(a => ({ ...a, subject_name: subj.subject_name })),
       )
       .slice(-3)
       .reverse() ?? [];
@@ -331,7 +341,7 @@ export default function StudentDashboardPage() {
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-extrabold text-gray-900">Recent Marks</h2>
             <Link
-              to="/student/subjects"
+              to="/student/performance"
               className="text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-0.5"
             >
               View Full Performance <ChevronRight className="w-3.5 h-3.5" />
@@ -348,7 +358,7 @@ export default function StudentDashboardPage() {
             <div className="space-y-3">
               {recentMarks.map(m => (
                 <div
-                  key={m.assessment_id}
+                  key={`${m.subject_name}-${m.assessment_id}`}
                   className="flex items-center justify-between p-3 rounded-xl bg-gray-50/60 border border-gray-100"
                 >
                   <div className="flex items-center gap-3">
@@ -358,7 +368,7 @@ export default function StudentDashboardPage() {
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{m.title}</p>
                       <p className="text-xs text-gray-400 font-medium">
-                        Offering #{m.offering_id}
+                        {m.subject_name}
                       </p>
                     </div>
                   </div>
@@ -460,7 +470,7 @@ export default function StudentDashboardPage() {
           ) : (
             <div className="space-y-3">
               {lowAttendance.map(a => {
-                const effective = a.present_count + a.late_count;
+                const effective = a.present + a.late;
                 const needed = Math.ceil((0.75 * a.total_sessions - effective) / 0.25);
                 return (
                   <div
@@ -471,10 +481,10 @@ export default function StudentDashboardPage() {
                       <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
                       <div>
                         <p className="text-sm font-semibold text-gray-900">
-                          Offering #{a.offering_id}
+                          {a.subject_name}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {a.present_count + a.late_count}/{a.total_sessions} sessions attended
+                          {a.present + a.late}/{a.total_sessions} sessions attended
                         </p>
                       </div>
                     </div>

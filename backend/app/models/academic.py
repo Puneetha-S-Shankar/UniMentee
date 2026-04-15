@@ -3,18 +3,20 @@ from sqlalchemy import ForeignKey, Text
 
 from app.database import Base
 
-class department(Base):
+class Department(Base):
     __tablename__ = 'departments'
     department_id = Column(BigInteger, primary_key=True)
     university_id = Column(BigInteger, nullable=False)
     name          = Column(String(255), nullable=False)
     code          = Column(String(50), nullable=False)
     is_active     = Column(Boolean, default=True)
+
+
 class Program(Base):
     __tablename__ = 'programs'
     program_id       = Column(BigInteger, primary_key=True, autoincrement=True)
     university_id    = Column(BigInteger, nullable=False)
-    department_id    = Column(BigInteger)
+    department_id    = Column(BigInteger, ForeignKey('departments.department_id'))
     name             = Column(String(255), nullable=False)
     code             = Column(String(50), nullable=False)
     degree_type      = Column(String(50), nullable=False)

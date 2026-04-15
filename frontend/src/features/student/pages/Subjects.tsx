@@ -161,7 +161,7 @@ function AssessmentBreakdown({ offeringId }: { offeringId: number }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Subjects() {
-  const userId = useAuthStore(s => s.userId);
+  const userId = useAuthStore((s) => s.user?.user_id);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [selectedSemKey, setSelectedSemKey] = useState<string>('');

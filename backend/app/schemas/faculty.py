@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 
 class FacultySubjectOut(BaseModel):
@@ -59,3 +59,49 @@ class OfferingAnalytics(BaseModel):
     assessments: List[AssessmentAnalytics]
     attendance: List[StudentAttendanceRow]
     at_risk_students: List[AtRiskStudent]
+
+
+# ── subject analytics (full payload for SubjectAnalyticsPage) ───────
+
+class OfferingInfoAnalytics(BaseModel):
+    subject_name: Optional[str]
+    subject_code: Optional[str]
+    section_id: Optional[int]
+    batch_id: int
+
+
+class MarksAnalysisItem(BaseModel):
+    assessment_id: int
+    title: str
+    max_marks: float
+    class_avg: Optional[float]
+    highest: Optional[float]
+    lowest: Optional[float]
+    std_dev: Optional[float]
+    distribution: List[DistributionBucket]
+
+
+class AttendanceOverviewRow(BaseModel):
+    student_id: int
+    usn: str
+    full_name: str
+    attendance_pct: float
+    present: int
+    absent: int
+    total: int
+
+
+class AtRiskAnalyticsRow(BaseModel):
+    student_id: int
+    usn: str
+    full_name: str
+    risk_type: Literal["attendance", "marks", "both"]
+    attendance_pct: Optional[float] = None
+    avg_marks_pct: Optional[float] = None
+
+
+class SubjectAnalyticsOut(BaseModel):
+    offering_info: OfferingInfoAnalytics
+    marks_analysis: List[MarksAnalysisItem]
+    attendance_overview: List[AttendanceOverviewRow]
+    at_risk: List[AtRiskAnalyticsRow]

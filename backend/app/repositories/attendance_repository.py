@@ -1,3 +1,4 @@
+"""Attendance persistence. Uses PostgreSQL-specific INSERT ... ON CONFLICT (see bulk_upsert_records)."""
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.models.attendance import AttendanceSession, AttendanceRecord

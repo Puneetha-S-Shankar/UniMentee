@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { usePermission } from '../../hooks/usePermission';
+import { useAuthStore } from '../../stores/authStore';
 
 interface PermissionGateProps {
   permission: string | string[];
@@ -8,19 +8,19 @@ interface PermissionGateProps {
 }
 
 /**
- * PermissionGate component that conditionally renders children based on user permissions
- * @param permission - A single permission string or an array of permission strings (all required)
- * @param children - Content to render if the user has the required permission(s)
- * @param fallback - Optional content to render if the user lacks permission (default: null)
+ * Renders children when the user has the required permission(s).
+ * For an array, every permission is required (AND).
  */
-export function PermissionGate({ 
-  permission, 
-  children, 
-  fallback = null 
+export function PermissionGate({
+  permission,
+  children,
+  fallback = null,
 }: PermissionGateProps) {
-  const hasPermission = usePermission(permission);
+  const permissions = useAuthStore((s) => s.user?.permissions ?? []);
+  const keys = Array.isArray(permission) ? permission : [permission];
+  const has = keys.every((k) => permissions.includes(k));
 
-  if (hasPermission) {
+  if (has) {
     return <>{children}</>;
   }
 

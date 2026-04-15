@@ -9,6 +9,7 @@ export const ROLE_HOME: Record<string, string> = {
   FACULTY: '/faculty/dashboard',
   MENTOR: '/mentor/dashboard',
   HOD: '/hod/dashboard',
+  COURSE_LEAD: '/course-lead/dashboard',
   DEAN: '/dean/dashboard',
   REGISTRAR: '/registrar/dashboard',
   TIMETABLE_COORDINATOR: '/timetable/dashboard',

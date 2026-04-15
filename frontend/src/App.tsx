@@ -1,33 +1,24 @@
-import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AppRouter from './router/AppRouter';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { RouterProvider } from 'react-router-dom';
+import { appRouter } from './router';
 import './App.css';
 
-// Create a QueryClient instance
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false,
+      staleTime: 60_000,
       retry: 1,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-/**
- * App Component
- * 
- * Root application component that sets up:
- * - QueryClientProvider for React Query
- * - BrowserRouter for routing
- * - AppRouter for route configuration
- */
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRouter />
-      </BrowserRouter>
+      <ReactQueryDevtools initialIsOpen={false} />
+      <RouterProvider router={appRouter} />
     </QueryClientProvider>
   );
 }

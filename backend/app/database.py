@@ -1,8 +1,22 @@
+"""SQLAlchemy engine and session. PostgreSQL is the supported production database."""
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.config import DATABASE_URL
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={"sslmode": "require"}, echo=True)
+from app.config import DATABASE_URL, DATABASE_SSLMODE
+
+_connect_args = {}
+_ssl = (DATABASE_SSLMODE or "").strip().lower()
+if _ssl and _ssl not in ("disable", "false", "0", "no"):
+    _connect_args["sslmode"] = DATABASE_SSLMODE
+
+_engine_kwargs = dict(
+    pool_pre_ping=True,
+    connect_args=_connect_args,
+    echo=os.getenv("SQLALCHEMY_ECHO", "").lower() in ("1", "true", "yes"),
+)
+engine = create_engine(DATABASE_URL, **_engine_kwargs)
 
 SessionLocal = sessionmaker(
     autocommit=False,

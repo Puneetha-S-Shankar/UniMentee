@@ -55,6 +55,7 @@ def get_current_user(
     ).all()
 
     user.permissions = [p.key for p in permissions]
+    user.roles = [r.name for r in roles]
 
     return user
 
@@ -66,4 +67,56 @@ def require_permission(permission_key: str):
                 detail="Permission denied"
             )
         return current_user
+    return dependency
+
+
+def require_any_permission(*permission_keys: str):
+    """User must have at least one of the given permissions."""
+
+    def dependency(current_user=Depends(get_current_user)):
+        if not any(k in current_user.permissions for k in permission_keys):
+            raise HTTPException(status_code=403, detail="Permission denied")
+        return current_user
+
+    return dependency
+
+
+def require_all_permissions(*permission_keys: str):
+    """User must have every listed permission."""
+
+    def dependency(current_user=Depends(get_current_user)):
+        missing = [k for k in permission_keys if k not in current_user.permissions]
+        if missing:
+            raise HTTPException(status_code=403, detail="Permission denied")
+        return current_user
+
+    return dependency
+
+
+def require_analytics_summary_access():
+    """ORG_VIEW / USER_VIEW / DEPT_VIEW, or HOD role (until department scopes exist)."""
+
+    def dependency(current_user=Depends(get_current_user)):
+        allowed = ("ORG_VIEW", "USER_VIEW", "DEPT_VIEW")
+        if any(k in current_user.permissions for k in allowed):
+            return current_user
+        roles = getattr(current_user, "roles", []) or []
+        if "HOD" in roles:
+            return current_user
+        raise HTTPException(status_code=403, detail="Permission denied")
+
+    return dependency
+
+
+def require_faculty_directory_access():
+    """USER_MANAGE / DEPT_VIEW, or HOD (faculty list only — enforced in handler)."""
+
+    def dependency(current_user=Depends(get_current_user)):
+        if any(k in current_user.permissions for k in ("USER_MANAGE", "DEPT_VIEW")):
+            return current_user
+        roles = getattr(current_user, "roles", []) or []
+        if "HOD" in roles:
+            return current_user
+        raise HTTPException(status_code=403, detail="Permission denied")
+
     return dependency

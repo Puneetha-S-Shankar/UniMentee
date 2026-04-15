@@ -7,7 +7,7 @@ class SessionIn(BaseModel):
     start_time: time
     end_time: time
     session_type: str = 'THEORY'
-    topic_covered: Optional[str]
+    topic_covered: str = 'Regular class session'
 
 class SessionOut(SessionIn):
     session_id: int

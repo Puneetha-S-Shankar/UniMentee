@@ -55,6 +55,7 @@ class RecentSessionOut(BaseModel):
     session_id: int
     assignment_id: int
     session_date: date
+    session_type: str = 'IN_PERSON'
     student_name: str
     topics_discussed: Optional[str]
     class Config: from_attributes = True
@@ -62,8 +63,10 @@ class RecentSessionOut(BaseModel):
 class UpcomingFollowupOut(BaseModel):
     session_id: int
     assignment_id: int
+    student_id: int
     student_name: str
     follow_up_date: date
+    topics_discussed: Optional[str]
     action_items: Optional[str]
     class Config: from_attributes = True
 

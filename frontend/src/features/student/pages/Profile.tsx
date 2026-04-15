@@ -7,8 +7,8 @@ import {
   Pencil, LogOut, Bell, Shield, Smartphone,
   KeyRound, AlertTriangle, ChevronRight, Check, X
 } from 'lucide-react';
-import api from '../../services/api';
-import { useAuthStore } from '../../stores/authStore';
+import api from '../../../services/api';
+import { useAuthStore } from '../../../stores/authStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

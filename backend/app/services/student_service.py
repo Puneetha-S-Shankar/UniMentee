@@ -2,8 +2,18 @@ from sqlalchemy.orm import Session
 from app.repositories import student_repository as repo
 from app.repositories.academic_repository import get_offering_by_id
 
-def list_students(db, university_id, batch_id=None, section_id=None):
-    return repo.get_students(db, university_id, batch_id, section_id)
+def list_students(
+    db,
+    university_id,
+    batch_id=None,
+    section_id=None,
+    program_id=None,
+    status=None,
+    search=None,
+):
+    return repo.get_students(
+        db, university_id, batch_id, section_id, program_id, status, search
+    )
 
 def get_student(db, student_id, university_id):
     s = repo.get_student_by_id(db, student_id, university_id)

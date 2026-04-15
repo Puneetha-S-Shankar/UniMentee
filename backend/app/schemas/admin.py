@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any, Literal
 from datetime import date, datetime
 
 
@@ -19,6 +19,7 @@ class AdminUserOut(BaseModel):
     roles: List[RoleOut]
     class Config: from_attributes = True
 
+
 class AdminUserCreate(BaseModel):
     full_name: str
     email: str
@@ -31,7 +32,7 @@ class AdminUserUpdate(BaseModel):
     role_ids: Optional[List[int]] = None
 
 class StatusUpdate(BaseModel):
-    status: str
+    status: Literal['ACTIVE', 'INACTIVE', 'SUSPENDED']
 
 
 # ── student onboarding ───────────────────────────────────────────────
@@ -47,19 +48,46 @@ class AdminStudentCreate(BaseModel):
     admission_date: date
 
 
+class AdminStudentCreatedOut(BaseModel):
+    student_id: int
+    user_id: int
+
+
+class StudentAdminPatch(BaseModel):
+    section_id: Optional[int] = None
+    status: Optional[str] = None
+
+
 # ── mentor assignments ───────────────────────────────────────────────
 
-class MentorAssignmentAdminOut(BaseModel):
-    assignment_id: int
-    mentor_user_id: int
-    mentor_name: str
+class MentorBriefOut(BaseModel):
+    user_id: int
+    full_name: str
+
+
+class StudentBriefOut(BaseModel):
     student_id: int
-    student_name: str
-    student_usn: str
+    full_name: str
+    usn: str
     batch_id: int
+
+
+class MentorAssignmentDetailOut(BaseModel):
+    assignment_id: int
+    mentor: MentorBriefOut
+    student: StudentBriefOut
     academic_year_id: int
     status: str
-    class Config: from_attributes = True
+    assigned_at: Optional[datetime] = None
+
+
+class MentorLoadRowOut(BaseModel):
+    mentor_user_id: int
+    full_name: str
+    active_mentees: int
+    at_risk_mentees: int
+    sessions_this_month: int
+
 
 class MentorAssignmentCreate(BaseModel):
     mentor_user_id: int
@@ -67,7 +95,7 @@ class MentorAssignmentCreate(BaseModel):
     academic_year_id: int
 
 class AssignmentStatusUpdate(BaseModel):
-    status: str
+    status: Literal['RELIEVED']
 
 
 # ── university settings ──────────────────────────────────────────────
@@ -82,6 +110,7 @@ class UniversitySettingsOut(BaseModel):
     cgpa_warning: float = 5.5
     max_mentees_per_mentor: int = 20
     university_name: Optional[str] = None
+    university_logo_url: Optional[str] = None
     class Config: from_attributes = True
 
 class UniversitySettingsUpdate(BaseModel):
@@ -92,32 +121,42 @@ class UniversitySettingsUpdate(BaseModel):
     cgpa_warning: Optional[float] = None
     max_mentees_per_mentor: Optional[int] = None
     university_name: Optional[str] = None
+    university_logo_url: Optional[str] = None
 
 
 # ── analytics ────────────────────────────────────────────────────────
 
 class AnalyticsSummary(BaseModel):
     total_students: int
-    total_users: int
-    pending_portfolio_items: int
-    submitted_assessments: int
+    total_faculty: int
+    at_risk_students: int
+    low_attendance_students: int
     active_offerings: int
+    pending_portfolio_verifications: int
+    pending_mark_verifications: int
+    total_users: int
+    current_term_enrollment: int = Field(
+        0,
+        description="Sum of current_enrollment on active offerings (placeholder until term scoping exists).",
+    )
 
 
 # ── audit logs ───────────────────────────────────────────────────────
 
 class AuditLogOut(BaseModel):
     log_id: int
-    university_id: int
-    entity_type: str
-    entity_id: Optional[int]
+    actor_name: Optional[str] = None
+    actor_user_id: Optional[int] = None
+    actor_roles: List[str] = Field(default_factory=list)
     action: str
-    actor_id: int
-    actor_name: Optional[str]
-    changes: Optional[str]
+    entity_type: str
+    entity_id: Optional[int] = None
+    old_value: Optional[Dict[str, Any]] = None
+    new_value: Optional[Dict[str, Any]] = None
     created_at: datetime
+    ip_address: Optional[str] = None
     class Config: from_attributes = True
 
 class AuditLogPage(BaseModel):
     logs: List[AuditLogOut]
-    next_cursor: Optional[str]
+    next_cursor: Optional[str] = None

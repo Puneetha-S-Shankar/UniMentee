@@ -12,14 +12,17 @@ from app.schemas.mentorship import (
     DashboardStats, RecentSessionOut, UpcomingFollowupOut,
 )
 from app.schemas.students import (
-    AttendanceSummary, AttendanceRecordDetail,
+    AttendanceSummary,
     OfferingMarks, AssessmentMarkDetail,
 )
+from app.services.attendance_summary_service import build_attendance_summaries
 from app.models.students import Student, StudentSubjectEnrollment
 from app.models.users import User
 from app.models.mentorship import MentorAssignment, MentoringSession
 from app.models.attendance import AttendanceSession, AttendanceRecord
 from app.models.marks import Assessment, StudentMark
+from app.models.academic import SubjectOffering
+from app.repositories.academic_repository import get_subject_name_for_curriculum
 
 router = APIRouter(prefix='/mentor', tags=['Mentor'])
 
@@ -77,61 +80,16 @@ def _verify_mentor_assignment(
 def _build_attendance_summary(
     db: Session, student_id: int, university_id: int,
 ) -> List[AttendanceSummary]:
-    enrollments = db.query(StudentSubjectEnrollment).filter(
-        StudentSubjectEnrollment.student_id == student_id,
-        StudentSubjectEnrollment.university_id == university_id,
-    ).all()
-
-    summaries = []
-    for enrollment in enrollments:
-        offering_id = enrollment.offering_id
-        session_ids = [
-            s[0] for s in db.query(AttendanceSession.session_id).filter(
-                AttendanceSession.offering_id == offering_id,
-                AttendanceSession.university_id == university_id,
-            ).all()
-        ]
-        if not session_ids:
-            continue
-
-        records = db.query(AttendanceRecord).filter(
-            AttendanceRecord.session_id.in_(session_ids),
-            AttendanceRecord.student_id == student_id,
-            AttendanceRecord.university_id == university_id,
-        ).all()
-
-        total_sessions = len(session_ids)
-        present_count = sum(1 for r in records if r.status == 'PRESENT')
-        absent_count = sum(1 for r in records if r.status == 'ABSENT')
-        late_count = sum(1 for r in records if r.status == 'LATE')
-        percentage = ((present_count + late_count) / total_sessions) * 100 if total_sessions else 0.0
-
-        session_details = [
-            AttendanceRecordDetail(
-                attendance_id=r.attendance_id,
-                session_id=r.session_id,
-                status=r.status,
-                marked_at=r.marked_at,
-                note=r.note,
-            )
-            for r in records
-        ]
-
-        summaries.append(AttendanceSummary(
-            offering_id=offering_id,
-            total_sessions=total_sessions,
-            present_count=present_count,
-            absent_count=absent_count,
-            late_count=late_count,
-            percentage=round(percentage, 2),
-            sessions=session_details,
-        ))
-
-    return summaries
+    return build_attendance_summaries(db, student_id, university_id)
 
 
 def _build_student_marks(
-    db: Session, student_id: int, university_id: int, *, published_only: bool = True,
+    db: Session,
+    student_id: int,
+    university_id: int,
+    *,
+    published_only: bool = True,
+    term_id: Optional[int] = None,
 ) -> List[OfferingMarks]:
     enrollments = db.query(StudentSubjectEnrollment).filter(
         StudentSubjectEnrollment.student_id == student_id,
@@ -140,6 +98,15 @@ def _build_student_marks(
 
     result = []
     for enrollment in enrollments:
+        offering = db.query(SubjectOffering).filter(
+            SubjectOffering.offering_id == enrollment.offering_id,
+            SubjectOffering.university_id == university_id,
+        ).first()
+        if not offering:
+            continue
+        if term_id is not None and offering.term_id != term_id:
+            continue
+
         query = db.query(Assessment).filter(
             Assessment.offering_id == enrollment.offering_id,
             Assessment.university_id == university_id,
@@ -179,8 +146,12 @@ def _build_student_marks(
             ))
 
         if details:
+            subject_name = get_subject_name_for_curriculum(
+                db, offering.curriculum_id, university_id
+            )
             result.append(OfferingMarks(
                 offering_id=enrollment.offering_id,
+                subject_name=subject_name,
                 assessments=details,
             ))
 
@@ -347,11 +318,14 @@ def dashboard_stats(user=Depends(get_current_user), db: Session = Depends(get_db
     else:
         recent = []
 
+    assignment_by_id = {a.assignment_id: a for a in assignments}
+
     recent_sessions = [
         RecentSessionOut(
             session_id=s.session_id,
             assignment_id=s.assignment_id,
             session_date=s.session_date,
+            session_type=s.session_type or 'IN_PERSON',
             student_name=name_lookup.get(s.assignment_id, "Unknown"),
             topics_discussed=s.topics_discussed,
         )
@@ -375,8 +349,11 @@ def dashboard_stats(user=Depends(get_current_user), db: Session = Depends(get_db
         UpcomingFollowupOut(
             session_id=s.session_id,
             assignment_id=s.assignment_id,
+            student_id=assignment_by_id[s.assignment_id].student_id
+            if s.assignment_id in assignment_by_id else 0,
             student_name=name_lookup.get(s.assignment_id, "Unknown"),
             follow_up_date=s.follow_up_date,
+            topics_discussed=s.topics_discussed,
             action_items=s.action_items,
         )
         for s in upcoming
@@ -409,7 +386,10 @@ def get_mentee_marks(
     term_id: Optional[int] = Query(None),
     user=Depends(get_current_user), db: Session = Depends(get_db)):
     _verify_mentor_assignment(db, user.user_id, student_id, user.university_id)
-    return _build_student_marks(db, student_id, user.university_id, published_only=False)
+    return _build_student_marks(
+        db, student_id, user.university_id,
+        published_only=False, term_id=term_id,
+    )
 
 
 # ── student-facing ───────────────────────────────────────────────────
@@ -417,8 +397,8 @@ def get_mentee_marks(
 @router.get('/my-sessions', response_model=List[SessionOut])
 def my_sessions(user=Depends(get_current_user), db=Depends(get_db)):
     student = db.query(Student).filter(
-    Student.user_id == user.user_id,
-    Student.university_id == user.university_id
+        Student.user_id == user.user_id,
+        Student.university_id == user.university_id,
     ).first()
 
     if not student:
@@ -427,5 +407,6 @@ def my_sessions(user=Depends(get_current_user), db=Depends(get_db)):
     assignment = repo.get_assignment_for_student(
         db, student.student_id, user.university_id
     )
-    if not assignment: raise HTTPException(status_code=404, detail='No active mentor assignment')
+    if not assignment:
+        return []
     return repo.get_sessions(db, assignment.assignment_id, user.university_id)

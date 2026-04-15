@@ -1,6 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { usePermission, useRole } from '../hooks/usePermission';
+import { useRole } from '../hooks/usePermission';
 import { 
   Home, 
   Calendar, 
@@ -14,7 +14,12 @@ import {
   Settings,
   Bell,
   LogOut,
-  GraduationCap
+  GraduationCap,
+  School,
+  ClipboardCheck,
+  Layers,
+  Library,
+  LayoutGrid,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -51,7 +56,7 @@ const NAV_CONFIG: NavItem[] = [
   },
   {
     label: 'Marks',
-    path: (role) => role === 'STUDENT' ? '/student/marks' : '/faculty/marks',
+    path: (role) => role === 'STUDENT' ? '/student/performance' : '/faculty/marks',
     icon: FileText,
     showIf: (_, hasPermission) => 
       hasPermission('MARKS_ENTER') || hasPermission('MARKS_VIEW_OWN'),
@@ -88,24 +93,60 @@ const NAV_CONFIG: NavItem[] = [
   },
   {
     label: 'Programs',
-    path: () => '/hod/programs',
+    path: () => '/admin/programs',
     icon: FolderOpen,
     showIf: (_, hasPermission) => hasPermission('ACADEMIC_MANAGE'),
+  },
+  {
+    label: 'Batches',
+    path: () => '/admin/batches',
+    icon: Layers,
+    showIf: (_, hasPermission) => hasPermission('ACADEMIC_MANAGE'),
+  },
+  {
+    label: 'Subjects',
+    path: () => '/admin/subjects',
+    icon: Library,
+    showIf: (_, hasPermission) => hasPermission('ACADEMIC_MANAGE'),
+  },
+  {
+    label: 'Sections',
+    path: () => '/admin/sections',
+    icon: LayoutGrid,
+    showIf: (_, hasPermission) => hasPermission('ACADEMIC_MANAGE'),
+  },
+  {
+    label: 'Students',
+    path: () => '/admin/students',
+    icon: School,
+    showIf: (_, hasPermission) => hasPermission('STUDENT_MANAGE'),
+  },
+  {
+    label: 'Mentor assignments',
+    path: () => '/admin/mentor-assignments',
+    icon: ClipboardCheck,
+    showIf: (_, hasPermission) => hasPermission('USER_MANAGE'),
   },
   {
     label: 'Users',
     path: () => '/admin/users',
     icon: Settings,
-    showIf: (_, hasPermission) => hasPermission('USER_MANAGE'),
+    showIf: (_, hasPermission) =>
+      hasPermission('USER_MANAGE') || hasPermission('USER_ASSIGN_ROLES'),
   },
 ];
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const role = useRole();
-  const hasPermission = usePermission;
+  const permissions = useAuthStore((state) => state.user?.permissions ?? []);
+  const checkPermission = (key: string | string[]) =>
+    typeof key === 'string'
+      ? permissions.includes(key)
+      : key.every((k) => permissions.includes(k));
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const userName = 'User Name';
+  const full_name = useAuthStore((state) => state.user?.full_name);
+  const userName = full_name ?? 'User';
   const [hasNotifications] = useState(true);
 
   const handleLogout = () => {
@@ -113,13 +154,13 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const visibleNavItems = NAV_CONFIG.filter((item) => 
-    item.showIf(role, (key) => hasPermission(key))
+  const visibleNavItems = NAV_CONFIG.filter((item) =>
+    item.showIf(role, checkPermission),
   );
 
   return (
-    <div className="flex h-screen bg-background-light dark:bg-background-dark font-display">
-      <aside className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-gray-50 font-display md:flex-row dark:bg-background-dark">
+      <aside className="flex w-full shrink-0 flex-col border-b border-gray-200 bg-white dark:border-gray-800 dark:border-gray-900 md:h-auto md:min-h-screen md:w-64 md:border-b-0 md:border-r">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
@@ -183,8 +224,8 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      <div className="flex-1 ml-64 flex flex-col">
-        <header className="sticky top-0 z-10 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex items-center justify-end px-6 gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex h-16 w-full shrink-0 items-center justify-end gap-4 border-b border-gray-200 bg-white px-6 dark:border-gray-800 dark:bg-gray-900">
           <button className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
             <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             {hasNotifications && (
@@ -203,7 +244,7 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="w-full min-w-0 flex-1 overflow-auto p-6">
           <Outlet />
         </main>
       </div>

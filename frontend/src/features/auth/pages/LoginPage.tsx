@@ -78,14 +78,13 @@ export default function LoginPage() {
       // Get the primary role (first role in the array)
       const role = userData.roles[0] || '';
 
-      // Step 3: authStore.setAuth(token, userId, universityId, role, permissions)
-      setAuth(
-        token,
-        userData.user_id,
-        userData.university_id,
-        role,
-        userData.permissions
-      );
+      setAuth(token, {
+        user_id: userData.user_id,
+        full_name: userData.full_name,
+        email: userData.email,
+        roles: userData.roles,
+        permissions: userData.permissions,
+      });
 
       // Step 4: navigate(getHomeRoute(role))
       navigate(getHomeRoute(role));

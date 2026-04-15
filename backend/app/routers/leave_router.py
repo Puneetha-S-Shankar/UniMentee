@@ -8,6 +8,7 @@ from app.core.rbac import get_current_user
 from app.models.students import Student
 from app.models.leave import LeaveRequest, LeaveRequestSubject
 from app.schemas.leave import LeaveRequestIn, LeaveRequestOut, OfferingBasic
+from app.models.academic import SubjectOffering, Subject
 
 router = APIRouter(prefix='/leave-requests', tags=['Leave Requests'])
 
@@ -22,7 +23,27 @@ def _get_student(db: Session, user) -> Student:
     return student
 
 
-def _to_out(db: Session, lr: LeaveRequest) -> LeaveRequestOut:
+def _subject_name_for_offering(db: Session, university_id: int, offering_id: int) -> str:
+    off = (
+        db.query(SubjectOffering)
+        .filter(
+            SubjectOffering.offering_id == offering_id,
+            SubjectOffering.university_id == university_id,
+        )
+        .first()
+    )
+    if not off:
+        return "Unknown"
+    # subject_offerings.curriculum_id is treated as subjects.subject_id until a curriculum graph exists.
+    sub = (
+        db.query(Subject)
+        .filter(Subject.subject_id == off.curriculum_id, Subject.university_id == university_id)
+        .first()
+    )
+    return sub.subject_name if sub else "Unknown"
+
+
+def _to_out(db: Session, lr: LeaveRequest, university_id: int) -> LeaveRequestOut:
     subjects = db.query(LeaveRequestSubject).filter(
         LeaveRequestSubject.leave_request_id == lr.leave_id,
     ).all()
@@ -34,7 +55,13 @@ def _to_out(db: Session, lr: LeaveRequest) -> LeaveRequestOut:
         status=lr.status,
         applied_at=lr.applied_at,
         document_url=lr.document_url,
-        subjects=[OfferingBasic(offering_id=s.offering_id) for s in subjects],
+        subjects=[
+            OfferingBasic(
+                offering_id=s.offering_id,
+                subject_name=_subject_name_for_offering(db, university_id, s.offering_id),
+            )
+            for s in subjects
+        ],
     )
 
 
@@ -56,7 +83,7 @@ def list_my_leave_requests(
         .all()
     )
 
-    return [_to_out(db, lr) for lr in requests]
+    return [_to_out(db, lr, user.university_id) for lr in requests]
 
 
 # ── create leave request ────────────────────────────────────────────
@@ -70,6 +97,18 @@ def create_leave_request(
         raise HTTPException(status_code=400, detail="from_date must be today or later")
 
     student = _get_student(db, user)
+
+    for oid in body.subject_ids:
+        off = (
+            db.query(SubjectOffering)
+            .filter(
+                SubjectOffering.offering_id == oid,
+                SubjectOffering.university_id == user.university_id,
+            )
+            .first()
+        )
+        if not off:
+            raise HTTPException(status_code=400, detail=f"Invalid offering_id: {oid}")
 
     lr = LeaveRequest(
         university_id=user.university_id,
@@ -88,7 +127,7 @@ def create_leave_request(
 
     db.commit()
     db.refresh(lr)
-    return _to_out(db, lr)
+    return _to_out(db, lr, user.university_id)
 
 
 # ── cancel leave request ────────────────────────────────────────────
