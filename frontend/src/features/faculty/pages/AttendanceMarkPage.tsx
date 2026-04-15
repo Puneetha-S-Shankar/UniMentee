@@ -130,15 +130,18 @@ export default function AttendanceMarkPage() {
 
   const studentsQuery = useQuery({
     queryKey: ['students', 'batch', offering?.batch_id, offering?.section_id],
-    queryFn: () =>
-      api
+    queryFn: () => {
+      const o = offering;
+      if (!o) throw new Error('Offering not loaded');
+      return api
         .get<StudentRow[]>('/students', {
           params: {
-            batch_id: offering!.batch_id,
-            ...(offering!.section_id != null ? { section_id: offering.section_id } : {}),
+            batch_id: o.batch_id,
+            ...(o.section_id != null ? { section_id: o.section_id } : {}),
           },
         })
-        .then((r) => r.data),
+        .then((r) => r.data);
+    },
     enabled: !!offering && canMark,
   });
 

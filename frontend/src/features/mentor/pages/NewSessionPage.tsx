@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -131,7 +131,7 @@ export default function NewSessionPage() {
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as Resolver<FormData>,
     defaultValues: {
       menteeStudentId: 0,
       session_date: todayISODate(),
@@ -222,7 +222,7 @@ export default function NewSessionPage() {
       </div>
 
       <form
-        onSubmit={handleSubmit((data) => mutation.mutate(data))}
+        onSubmit={handleSubmit((data: FormData) => mutation.mutate(data))}
         className="space-y-5 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
       >
         <div>

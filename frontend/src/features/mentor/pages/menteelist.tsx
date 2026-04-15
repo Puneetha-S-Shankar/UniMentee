@@ -101,7 +101,7 @@ export default function MenteeList() {
   const [riskFilter, setRiskFilter] = useState<RiskLevel>('ALL');
   const [programFilter, setProgramFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [semester, setSemester] = useState('Fall 2024');
+  const [semester] = useState('Fall 2024');
 
   // Fetch assignments first
   const { data: assignments = [], isLoading: aLoading } = useQuery<Assignment[]>({

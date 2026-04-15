@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
-import { TrendingUp, TrendingDown, BookOpen, UserCheck, Award, ChevronRight, Clock } from 'lucide-react';
+import { TrendingUp, BookOpen, UserCheck, Award, ChevronRight, Clock } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

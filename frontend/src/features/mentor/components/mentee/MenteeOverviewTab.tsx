@@ -131,9 +131,12 @@ export function MenteeOverviewTab({
               <XAxis dataKey="label" tick={{ fontSize: 11 }} />
               <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} width={36} />
               <Tooltip
-                formatter={(v: number | string) =>
-                  v == null || v === '' ? '—' : typeof v === 'number' ? v.toFixed(2) : v
-                }
+                formatter={(value) => {
+                  if (value == null || value === '') return '—';
+                  if (Array.isArray(value)) return value.map((x) => (typeof x === 'number' ? x.toFixed(2) : x)).join(', ');
+                  if (typeof value === 'number') return value.toFixed(2);
+                  return String(value);
+                }}
               />
               <Line type="monotone" dataKey="sgpa" name="SGPA" stroke="#7c3aed" strokeWidth={2} dot />
             </LineChart>

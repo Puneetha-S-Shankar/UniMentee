@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus } from 'lucide-react';
@@ -67,7 +67,7 @@ export default function BatchesPage() {
   }, [programs]);
 
   const form = useForm<BatchForm>({
-    resolver: zodResolver(batchSchema),
+    resolver: zodResolver(batchSchema) as Resolver<BatchForm>,
     defaultValues: {
       program_id: 0,
       batch_year: new Date().getFullYear(),
@@ -172,7 +172,7 @@ export default function BatchesPage() {
       <CrudModal open={modalOpen} title="Create batch" onClose={() => setModalOpen(false)}>
         <form
           className="space-y-3"
-          onSubmit={form.handleSubmit((data) => createMut.mutate(data))}
+          onSubmit={form.handleSubmit((data: BatchForm) => createMut.mutate(data))}
         >
           <div>
             <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Program</label>

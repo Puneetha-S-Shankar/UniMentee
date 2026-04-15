@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function ProgramsPage() {
   });
 
   const form = useForm<ProgramForm>({
-    resolver: zodResolver(programSchema),
+    resolver: zodResolver(programSchema) as Resolver<ProgramForm>,
     defaultValues: {
       name: '',
       code: '',

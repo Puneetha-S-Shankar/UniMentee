@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Pencil, LogOut, Bell, Shield, Smartphone,
-  KeyRound, AlertTriangle, ChevronRight, Check, X
+  Pencil, LogOut, Bell, Shield,
+  AlertTriangle, ChevronRight, Check, X
 } from 'lucide-react';
 import api from '../../../services/api';
 import { useAuthStore } from '../../../stores/authStore';

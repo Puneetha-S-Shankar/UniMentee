@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus } from 'lucide-react';
@@ -64,7 +64,7 @@ export default function SectionsPage() {
   }, [batches]);
 
   const form = useForm<SectionForm>({
-    resolver: zodResolver(sectionSchema),
+    resolver: zodResolver(sectionSchema) as Resolver<SectionForm>,
     defaultValues: {
       batch_id: 0,
       name: '',

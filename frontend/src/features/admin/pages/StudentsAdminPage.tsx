@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Download, Pencil, Plus, Search, Users } from 'lucide-react';
@@ -260,7 +260,7 @@ export default function StudentsAdminPage() {
   }, [uniqueBatchIds, allBatchesForLabels.data]);
 
   const createForm = useForm<CreateStudentForm>({
-    resolver: zodResolver(createStudentSchema),
+    resolver: zodResolver(createStudentSchema) as Resolver<CreateStudentForm>,
     defaultValues: {
       full_name: '',
       email: '',

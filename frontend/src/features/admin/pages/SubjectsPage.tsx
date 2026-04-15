@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Search } from 'lucide-react';
@@ -48,7 +48,7 @@ export default function SubjectsPage() {
   });
 
   const form = useForm<SubjectForm>({
-    resolver: zodResolver(subjectSchema),
+    resolver: zodResolver(subjectSchema) as Resolver<SubjectForm>,
     defaultValues: {
       subject_code: '',
       subject_name: '',

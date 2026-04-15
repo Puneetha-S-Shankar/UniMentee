@@ -348,7 +348,6 @@ export default function Attendance() {
   const {
     data: enrollments,
     isLoading: enrollmentsLoading,
-    isError: enrollmentsError,
   } = useQuery<Enrollment[]>({
     queryKey: ['enrollments', studentId],
     queryFn: async () => {

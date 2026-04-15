@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AlertTriangle, Plus } from 'lucide-react';
@@ -134,7 +134,7 @@ export default function MentorAssignmentsPage() {
   });
 
   const form = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
+    resolver: zodResolver(createSchema) as Resolver<CreateForm>,
     defaultValues: {
       mentor_user_id: undefined as unknown as number,
       academic_year_id: new Date().getFullYear(),

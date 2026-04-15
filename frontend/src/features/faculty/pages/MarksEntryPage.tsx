@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { isAxiosError } from 'axios';
@@ -51,10 +51,7 @@ interface AssessmentTypeRow {
 type MarkCell = { marks_obtained: number | null; is_absent: boolean; version: number };
 
 const createAssessmentSchema = z.object({
-  assessment_type_id: z
-    .union([z.string(), z.number()])
-    .transform((v) => Number(v))
-    .pipe(z.number().int().positive({ message: 'Select an assessment type' })),
+  assessment_type_id: z.coerce.number().int().positive({ message: 'Select an assessment type' }),
   title: z.string().min(1, 'Title is required'),
   max_marks: z.coerce.number().positive(),
   passing_marks: z.string().optional(),
@@ -97,15 +94,18 @@ export default function MarksEntryPage() {
 
   const studentsQuery = useQuery({
     queryKey: ['students', 'batch', offering?.batch_id, offering?.section_id],
-    queryFn: () =>
-      api
+    queryFn: () => {
+      const o = offering;
+      if (!o) throw new Error('Offering not loaded');
+      return api
         .get<StudentRow[]>('/students', {
           params: {
-            batch_id: offering!.batch_id,
-            ...(offering!.section_id != null ? { section_id: offering.section_id } : {}),
+            batch_id: o.batch_id,
+            ...(o.section_id != null ? { section_id: o.section_id } : {}),
           },
         })
-        .then((r) => r.data),
+        .then((r) => r.data);
+    },
     enabled: !!offering && canEnter,
   });
 
@@ -214,7 +214,6 @@ export default function MarksEntryPage() {
   const scheduleSave = useCallback(
     (studentId: number) => {
       if (!selectedAssessmentId || !selectedAssessment || selectedAssessment.status !== 'DRAFT') return;
-      const sid = selectedAssessmentId;
       window.clearTimeout(blurTimers.current[studentId]);
       blurTimers.current[studentId] = window.setTimeout(() => {
         const cell = marksMapRef.current[studentId];
@@ -278,8 +277,9 @@ export default function MarksEntryPage() {
     reset: resetCreate,
     formState: { errors: createErrors },
   } = useForm<CreateAssessmentForm>({
-    resolver: zodResolver(createAssessmentSchema),
+    resolver: zodResolver(createAssessmentSchema) as Resolver<CreateAssessmentForm>,
     defaultValues: {
+      assessment_type_id: 0,
       title: '',
       max_marks: 20,
       passing_marks: undefined,
@@ -540,7 +540,7 @@ export default function MarksEntryPage() {
               </button>
             </div>
             <form
-              onSubmit={handleSubmit((data) => {
+              onSubmit={handleSubmit((data: CreateAssessmentForm) => {
                 createMutation.mutate(data);
               })}
               className="space-y-3"

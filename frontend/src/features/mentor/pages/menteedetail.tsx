@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, BarChart, Bar
+  BarChart, Bar
 } from 'recharts';
 import {
   ArrowLeft, GraduationCap, Calendar, BookOpen, Star,
@@ -274,7 +274,7 @@ function OverviewTab({ student, enrollments }: { student: StudentProfile; enroll
 
 // ─── Attendance Tab ───────────────────────────────────────────────────────────
 
-function AttendanceTab({ enrollments, assignmentId }: { enrollments: Enrollment[]; assignmentId?: number }) {
+function AttendanceTab({ enrollments }: { enrollments: Enrollment[] }) {
   const [selectedSubject, setSelectedSubject] = useState<Enrollment | null>(null);
 
   const { data: sessions = [], isLoading } = useQuery<AttendanceSession[]>({
@@ -401,7 +401,13 @@ function MarksTab({ enrollments }: { enrollments: Enrollment[] }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" />
             <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
             <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-            <Tooltip formatter={(v: number) => [`${v}%`, 'Score']} />
+            <Tooltip
+              formatter={(value) => {
+                if (value == null || value === '') return ['—', 'Score'];
+                const n = typeof value === 'number' ? value : Number(value);
+                return [`${Number.isFinite(n) ? n : 0}%`, 'Score'];
+              }}
+            />
             <Bar dataKey="score" fill="#7c3aed" radius={[4, 4, 0, 0]} opacity={0.85} />
           </BarChart>
         </ResponsiveContainer>
@@ -674,7 +680,7 @@ export default function MenteeDetail() {
         ) : student ? (
           <>
             {activeTab === 'overview' && <OverviewTab student={student} enrollments={enrollments} />}
-            {activeTab === 'attendance' && <AttendanceTab enrollments={enrollments} assignmentId={assignment?.id} />}
+            {activeTab === 'attendance' && <AttendanceTab enrollments={enrollments} />}
             {activeTab === 'marks' && <MarksTab enrollments={enrollments} />}
             {activeTab === 'notes' && <NotesTab sessions={sessions} />}
           </>
