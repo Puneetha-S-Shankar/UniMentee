@@ -6,6 +6,14 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 from app.config import DATABASE_URL, DATABASE_SSLMODE
 
+_VALID_SCHEMES = ("postgresql://", "postgresql+", "postgres://")
+if not any(DATABASE_URL.startswith(s) for s in _VALID_SCHEMES):
+    raise RuntimeError(
+        "DATABASE_URL must be a PostgreSQL connection string "
+        "(e.g. postgresql://user:password@host:5432/dbname).\n"
+        "Check your .env file — the current value does not look like a valid URL."
+    )
+
 _connect_args = {}
 _ssl = (DATABASE_SSLMODE or "").strip().lower()
 if _ssl and _ssl not in ("disable", "false", "0", "no"):

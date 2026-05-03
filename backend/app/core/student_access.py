@@ -51,12 +51,16 @@ def assert_can_read_student(
     raise HTTPException(status_code=403, detail="Not allowed to access this student")
 
 
-def assert_can_mutate_enrollment(user) -> None:
-    """Enroll/drop — academic or user admin only."""
+def assert_can_mutate_enrollment(
+    db: Session, user, student_id: int, university_id: int
+) -> None:
+    """Enroll/drop — academic or user admin, or the student acting on their own record."""
     perms = getattr(user, "permissions", []) or []
     if "ACADEMIC_MANAGE" in perms or "USER_MANAGE" in perms:
         return
+    if student_id_for_user(db, user.user_id, university_id) == student_id:
+        return
     raise HTTPException(
         status_code=403,
-        detail="Enrollment changes require ACADEMIC_MANAGE or USER_MANAGE",
+        detail="Enrollment changes require ACADEMIC_MANAGE or USER_MANAGE, or must be your own record",
     )

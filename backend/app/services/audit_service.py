@@ -26,4 +26,4 @@ def log_action(db: Session, university_id: int, actor_user_id: int,
         'new': json.dumps(new_value) if new_value else None,
         'ip': ip_address
     })
-    # Caller must db.commit() after log_action so the INSERT is persisted.
+    db.commit()

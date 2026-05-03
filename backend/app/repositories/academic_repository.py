@@ -108,9 +108,7 @@ def create_program(db: Session, university_id: int, data: dict):
         return program
     except IntegrityError as e:
         db.rollback()
-        print("REAL ERROR:", e) 
-        raise ValueError("Program code already exists for this university")  # 👈 add this
-        # raise ValueError('Program code already exists for this university')
+        raise ValueError("Program code already exists for this university")
     
     
     
@@ -180,9 +178,8 @@ def create_offering(db: Session, university_id: int, data: dict):
         db.commit()
         db.refresh(offering)
         return offering
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
-        print("REAL DB ERROR:", e) 
         raise ValueError(str(e.orig))
     db.refresh(offering)
     return offering

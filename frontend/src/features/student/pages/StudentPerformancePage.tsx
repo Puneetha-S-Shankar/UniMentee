@@ -496,7 +496,7 @@ export default function StudentPerformancePage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">Performance</h1>
-          {/* <p className="mt-1 text-sm text-gray-500">SGPA, CGPA, and term-wise marks</p> */}
+          {/* d */}
         </div>
         <AcademicStandingBadge cgpa={latestCgpa} />
       </div>

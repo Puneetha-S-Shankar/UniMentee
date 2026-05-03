@@ -79,7 +79,6 @@ def create_item(
         entity_type='portfolio_items',
         entity_id=item.item_id
     )
-    db.commit()
 
     return {
         'item_id': item.item_id,

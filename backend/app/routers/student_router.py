@@ -345,7 +345,7 @@ def get_enrollments(
 def enroll(
     student_id: int, body: EnrollmentIn,
     user=Depends(get_current_user), db: Session = Depends(get_db)):
-    assert_can_mutate_enrollment(user)
+    assert_can_mutate_enrollment(db, user, student_id, user.university_id)
     try:
         return svc.enroll(db, user.university_id, student_id, body.offering_id)
     except LookupError as e:
@@ -385,7 +385,7 @@ def drop(
     student_id: int,
     enrollment_id: int,
     user=Depends(get_current_user), db: Session = Depends(get_db)):
-    assert_can_mutate_enrollment(user)
+    assert_can_mutate_enrollment(db, user, student_id, user.university_id)
     try:
         return svc.drop(db, enrollment_id, student_id, user.university_id)
     except LookupError as e:
